@@ -12,8 +12,8 @@ Since we are using [LITCRYPT](https://github.com/anvie/litcrypt.rs) plugin to ob
 After that, simply compile the code and execute it:
 
 	C:\Users\User\Desktop\CustomEntryPoint> cargo build --release
-	C:\Users\User\Desktop\Dumpy\CustomEntryPoint\target\release> entry_point.exe -h
+	C:\Users\User\Desktop\CustomEntryPoint\target\release> entry_point.exe -h
 
 # Usage
 
-	entry_point.exe -i c:\path\to\input\file.dll -f ExportedFunctionName -o c:\output\path\file2.dll
+	C:\Users\User\Desktop\CustomEntryPoint\target\release> entry_point.exe -i c:\path\to\input\file.dll -f ExportedFunctionName -o c:\output\path\file2.dll
