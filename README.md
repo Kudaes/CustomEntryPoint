@@ -16,4 +16,4 @@ After that, simply compile the code and execute it:
 
 # Usage
 
-	C:\Users\User\Desktop\CustomEntryPoint\target\release> entry_point.exe -i c:\path\to\input\file.dll -f ExportedFunctionName -o c:\output\path\file2.dll
+	C:\Users\User\Desktop> entry_point.exe -i c:\path\to\input\file.dll -f ExportedFunctionName -o c:\output\path\file2.dll
