@@ -12,6 +12,8 @@ fn main() {
         opts.optopt("i", "input", "Input dll's path.","");
         opts.optopt("o", "output", "Path where the resulting dll should be written to.","");
         opts.optopt("f", "function", "Exported function to use as the new entry point.","");
+        opts.optflag("e", "make_exe", "Change the dll's characteristics to those expected from an .exe file.");
+
 
         let matches = match opts.parse(&args[1..]) {
             Ok(m) => { m }
@@ -29,8 +31,8 @@ fn main() {
 
         let file_content = fs::read(&input).expect("[x] Error opening the specified dll.");
         let pe_ptr = file_content.as_ptr() as *mut u8;
-        let mapped_pe = dinvoke::load_library_a(&input);
-        let function_addr = dinvoke::get_function_address(mapped_pe, &function);
+        let mapped_pe = dinvoke_rs::dinvoke::load_library_a(&input);
+        let function_addr = dinvoke_rs::dinvoke::get_function_address(mapped_pe, &function);
         if function_addr == 0
         {
             println!("[x] The dll does not export any function with name {}", function);
@@ -38,6 +40,14 @@ fn main() {
         }
 
         let e_lfanew: usize = *((pe_ptr as usize + 0x3C) as *const u32) as usize;
+
+        if matches.opt_present("e")
+        {
+            let charact = (pe_ptr as usize + e_lfanew as usize + 0x4 + 0x13) as *mut u8; 
+            *charact = 0;
+            println!("[+] Dll's characteristics have been set to 0. The extension can be switched to \".exe\".");
+        } 
+
         println!("[-] Patching entry point at RVA 0x{:x}...", e_lfanew + 0x18 + 16);
         let entry = (pe_ptr as usize +  e_lfanew + 0x18 + 16) as *mut u32;
         *entry = (function_addr-mapped_pe) as u32;
