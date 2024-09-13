@@ -47,19 +47,19 @@ fn main() {
 
         let e_lfanew: usize = *((pe_ptr as usize + 0x3C) as *const u32) as usize;
 
-        if matches.opt_present("e")
-        {
-            let charact = (pe_ptr as usize + e_lfanew as usize + 0x4 + 0x13) as *mut u8; 
-            *charact = 0;
-            println!("[+] Dll's characteristics have been set to 0. The file can now be run directly.");
-        } 
-
         if function != String::new() 
         {
             println!("[-] Patching entry point at RVA 0x{:x}...", e_lfanew + 0x18 + 16);
             let entry = (pe_ptr as usize +  e_lfanew + 0x18 + 16) as *mut u32;
             *entry = (function_addr - mapped_pe) as u32;
         }
+
+        if matches.opt_present("e")
+        {
+            let characteristics = (pe_ptr as usize + e_lfanew as usize + 0x4 + 0x13) as *mut u8; 
+            *characteristics = 0;
+            println!("[+] Dll's characteristics have been set to 0. The file can now be run directly.");
+        } 
         
         let mut file = std::fs::File::create(&output).unwrap();
         let _r = file.write(file_content.as_slice()).unwrap();
