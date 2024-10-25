@@ -1,4 +1,4 @@
-use std::{fs, io::Write, env};
+use std::{env, ffi::c_void, fs, io::Write};
 use getopts::Options;
 
 fn main() {
@@ -13,6 +13,7 @@ fn main() {
         opts.optopt("o", "output", "Path where the resulting dll should be written to.","");
         opts.optopt("f", "function", "Exported function to use as the new entry point.","");
         opts.optflag("e", "make_exe", "Change the dll's characteristics to those expected from an .exe file.");
+        opts.optflag("n", "nullify_callbacks", "Replace all TLS callbacks with a return (0xC3) instruction.");
 
 
         let matches = match opts.parse(&args[1..]) {
@@ -59,6 +60,44 @@ fn main() {
             let characteristics = (pe_ptr as usize + e_lfanew as usize + 0x4 + 0x13) as *mut u8; 
             *characteristics = 0;
             println!("[+] Dll's characteristics have been set to 0. The file can now be run directly.");
+        } 
+
+        if matches.opt_present("n")
+        {
+            let mut tls_callback_vas: Vec<usize> = vec![]; 
+            if mapping_result.0.opt_header_64.number_of_rva_and_sizes >= 10
+            {
+                let address: *mut u8 = (mapping_result.1  + mapping_result.0.opt_header_64.datas_directory[9].VirtualAddress as usize) as *mut u8;
+                let address_of_tls_callback = address.add(24) as *mut usize;
+                let mut address_of_tls_callback_array: *mut usize = std::mem::transmute(*address_of_tls_callback);
+                
+                while *address_of_tls_callback_array != 0
+                {
+                    tls_callback_vas.push(*address_of_tls_callback_array);
+                    address_of_tls_callback_array = address_of_tls_callback_array.add(1);
+                }
+            }
+
+            // We calculate entrypoint/tls callbacks' RVAs from .text section's base address
+            let mut index = 0;
+            for section in &mapping_result.0.sections
+            {
+                if std::str::from_utf8(&section.Name).unwrap().contains(".text")
+                {
+                    let text_base_address = mapping_result.1 + section.VirtualAddress as usize;
+                    for tls_callback_va in &tls_callback_vas
+                    {
+                        let tls_rva = (tls_callback_va - text_base_address) as u32;
+                        let tls_callback_addr = (pe_ptr as usize + section.PointerToRawData as usize + tls_rva as usize) as *mut u8;
+                        *tls_callback_addr = 0xc3; // Just a ret; instruction to replace Tls Callbacks
+                        index += 1;
+                    }
+
+                    break;
+                }
+            }
+
+            println!("[+] TLS callback nullified: {}", index);
         } 
         
         let mut file = std::fs::File::create(&output).unwrap();
